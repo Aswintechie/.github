@@ -16,6 +16,7 @@ Welcome to **Aswintechie** – an organization focused on developer tooling, per
 | [ttnn-web-calculator](https://github.com/Aswintechie/ttnn-web-calculator) | A web-based calculator for TTNN operations and computations | HTML |
 | [ghadiff](https://github.com/Aswintechie/ghadiff) | A tool for comparing and diffing GitHub Actions workflow files | Python |
 | [whatsapp_bot](https://github.com/Aswintechie/whatsapp_bot) | A Python-based WhatsApp bot | Python |
+| [3d_printing](https://github.com/Aswintechie/3d_printing) | – | HTML |
 <!-- REPOS_END -->
 
 ## 📬 Contact
