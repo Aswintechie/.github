@@ -17,7 +17,7 @@ Welcome to **Aswintechie** – an organization focused on developer tooling, per
 | [ghadiff](https://github.com/Aswintechie/ghadiff) | A tool for comparing and diffing GitHub Actions workflow files | Python |
 | [whatsapp_bot](https://github.com/Aswintechie/whatsapp_bot) | A Python-based WhatsApp bot | Python |
 | [3d_printing](https://github.com/Aswintechie/3d_printing) | – | HTML |
-| [AiBuddy](https://github.com/Aswintechie/AiBuddy) | – | – |
+| [AiBuddy](https://github.com/Aswintechie/AiBuddy) | – | Python |
 <!-- REPOS_END -->
 
 ## 📬 Contact
