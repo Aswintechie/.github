@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
 Auto-updates the repository table in README files by fetching all public repos
-from the GitHub API. Descriptions from the API take priority; existing README
-descriptions are kept as a fallback for repos that have no API description.
+from the GitHub API. Descriptions from the API take priority; CUSTOM_DESCRIPTIONS
+below are used as fallback for repos with no GitHub description.
 
 Usage:
     GITHUB_TOKEN=<token> python3 scripts/update_readme.py
@@ -16,10 +16,28 @@ import urllib.request
 from urllib.error import HTTPError
 
 ORG = "Aswintechie"
-EXCLUDE = {".github"}  # skip the profile repo itself
+EXCLUDE = {".github"}
 
 MARKER_START = "<!-- REPOS_START -->"
 MARKER_END = "<!-- REPOS_END -->"
+
+# Repos shown first, in this order. Anything not listed here follows alphabetically.
+PINNED_ORDER = [
+    "ttperf",
+    "ttnn-performance-dashboard",
+    "portfolio",
+    "whatsapp_bot",
+    "3d_printing",
+    "AiBuddy",
+]
+
+# Fallback descriptions when GitHub API returns none.
+CUSTOM_DESCRIPTIONS = {
+    "3d_printing": "3D print portfolio and showcase site — custom figurines, decor, and art pieces. Orders via DM",
+    "AiBuddy": "AI-powered chatbot for Microsoft Teams — brings conversational AI into team channels and group chats",
+    "whatsapp_bot": "WhatsApp AI assistant bot powered by Claude — conversational AI for everyday use",
+    "cheap-domain": "Get custom subdomains under aswincloud.com for just ₹20/month",
+}
 
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 README_FILES = [
@@ -29,7 +47,7 @@ README_FILES = [
 
 
 def fetch_repos(token=None):
-    """Return all public, non-fork repos for the org, sorted by created_at."""
+    """Return all public, non-fork repos for the org."""
     repos = []
     page = 1
     headers = {
@@ -57,32 +75,24 @@ def fetch_repos(token=None):
         repos.extend(data)
         page += 1
 
-    return sorted(
-        [r for r in repos if not r["fork"] and r["name"] not in EXCLUDE],
-        key=lambda r: r["created_at"],
+    return [r for r in repos if not r["fork"] and r["name"] not in EXCLUDE]
+
+
+def sort_repos(repos):
+    """Sort: pinned in order first, then rest alphabetically."""
+    pinned_index = {name: i for i, name in enumerate(PINNED_ORDER)}
+    pinned = sorted(
+        [r for r in repos if r["name"] in pinned_index],
+        key=lambda r: pinned_index[r["name"]],
     )
-
-
-def parse_existing_descriptions(content):
-    """
-    Extract {repo_name: description} from the current README table so we can
-    preserve hand-written descriptions for repos that have no GitHub description.
-    Strips the *(archived)* suffix from names before storing.
-    """
-    descriptions = {}
-    # Match table rows: | [name](url) ... | description | ... |
-    row_re = re.compile(
-        r"\|\s*\[([^\]]+)\]\([^)]+\)[^|]*\|\s*([^|]+?)\s*\|"
+    rest = sorted(
+        [r for r in repos if r["name"] not in pinned_index],
+        key=lambda r: r["name"].lower(),
     )
-    for match in row_re.finditer(content):
-        name = match.group(1).strip()
-        desc = match.group(2).strip()
-        if desc and desc != "–":
-            descriptions[name] = desc
-    return descriptions
+    return pinned + rest
 
 
-def build_table(repos, fallback_descriptions):
+def build_table(repos):
     """Build the Markdown table string for the given repos."""
     rows = [
         "| Repository | Description | Language |",
@@ -92,7 +102,7 @@ def build_table(repos, fallback_descriptions):
         name = repo["name"]
         url = repo["html_url"]
         api_desc = (repo.get("description") or "").strip()
-        desc = api_desc or fallback_descriptions.get(name, "–")
+        desc = api_desc or CUSTOM_DESCRIPTIONS.get(name, "–")
         lang = repo.get("language") or "–"
         archived = repo.get("archived", False)
 
@@ -103,7 +113,6 @@ def build_table(repos, fallback_descriptions):
 
 
 def replace_between_markers(content, table):
-    """Replace the content between REPOS_START and REPOS_END markers."""
     new_block = f"{MARKER_START}\n{table}\n{MARKER_END}"
     pattern = re.compile(
         re.escape(MARKER_START) + ".*?" + re.escape(MARKER_END),
@@ -113,7 +122,6 @@ def replace_between_markers(content, table):
 
 
 def update_file(path, table):
-    """Update a single README file. Returns True if the file was changed."""
     real_path = os.path.realpath(path)
     if not os.path.exists(real_path):
         print(f"File not found, skipping: {real_path}", file=sys.stderr)
@@ -140,17 +148,8 @@ def update_file(path, table):
 def main():
     token = os.environ.get("GITHUB_TOKEN")
     repos = fetch_repos(token)
-
-    # Collect fallback descriptions from the first README that exists
-    fallback_descriptions = {}
-    for path in README_FILES:
-        real_path = os.path.realpath(path)
-        if os.path.exists(real_path):
-            with open(real_path, encoding="utf-8") as fh:
-                fallback_descriptions.update(parse_existing_descriptions(fh.read()))
-            break
-
-    table = build_table(repos, fallback_descriptions)
+    sorted_repos = sort_repos(repos)
+    table = build_table(sorted_repos)
 
     for path in README_FILES:
         update_file(path, table)
